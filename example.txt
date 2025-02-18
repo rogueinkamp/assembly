@@ -1,0 +1,7 @@
+Hello
+World
+From
+Inside
+This
+Example.txt
+File
