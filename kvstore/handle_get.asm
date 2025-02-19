@@ -16,14 +16,15 @@ section .data
     get_msg_log db "GET CMD FOUND", 10, 0
     get_msg_log_len equ $ - get_msg_log - 1
     newline db 0x0a    ; ASCII code for newline (LF)
-    key_buffer_length equ 5
+    command_buffer_length equ 4
 
     GENERIC_MESSAGE_PROMPT db "DEBUG: "
     GENERIC_MESSAGE_PROMPT_LEN equ $ - GENERIC_MESSAGE_PROMPT
     NEWLINE db 0x0A
 
 section .bss
-    key_buffer resb 6  ; For storing the key
+    input_buffer resb 259; temp for all data (4 + 255 max)
+    command_buffer resb 4 ; For storing the key
     data_buffer resb 256  ; For storing the key
 
 section .text
@@ -38,8 +39,8 @@ _start:
     mov rcx, 255
     xor rax, rax
     rep stosb
-    mov rdi, key_buffer
-    mov rcx, 5
+    mov rdi, command_buffer
+    mov rcx, 4
     xor rax, rax
     rep stosb
 
@@ -53,33 +54,28 @@ _start:
     ; read from stdin
     mov rax, 0
     mov rdi, 0
-    mov rsi, buffer ; set store to buffer - rsi is pointing to the buffer that has the data
-    mov rdx, 4  ; Read only first 4 bytes for command
+    mov rsi, input_buffer ; set store to buffer - rsi is pointing to the buffer that has the data
+    mov rdx, 259  ; max bytes to read (may need to adjust later for logner json strings)
     syscall
 
 ;    ; Check if we read any data
-    cmp rax, 0
-    je main_loop  ; If no bytes read, try again
+             ; Check if we read enough data
+    cmp rax, 4               ; Need at least 4 bytes for command
+    jl main_loop             ; If less than 4, loop back
 
-    ; Trim trailing spaces
-    mov rcx, rax  ; Length of what was read
-    lea rsi, [buffer + rcx - 1]  ; Point to last character
-    .trim_trailing:
-        cmp byte [rsi], ' '
-        jne .trim_done
-        dec rsi
-        dec rcx
-        cmp rcx, 0
-        jg .trim_trailing
-    .trim_done:
+    ; Copy first 4 bytes to command_buffer
+    mov rsi, input_buffer    ; Source: input_buffer
+    mov rdi, command_buffer  ; Destination: command_buffer
+    mov rcx, 4               ; Copy 4 bytes
+    rep movsb                ; Perform copy
+    mov byte [command_buffer + 4], 0  ; Null-terminate command_buffer
 
-    mov byte [rsi + 1], 0  ; Null terminate after last non-space character
-
-    ; Move trimmed command to key_buffer
-    mov rdi, key_buffer
-    mov rsi, buffer
-    rep movsb
-
+    ; Process remaining data into data_buffer, skipping leading spaces
+    mov rsi, input_buffer    ; Start of input buffer
+    add rsi, 4               ; Skip first 4 bytes
+    mov rdi, data_buffer     ; Destination: data_buffer
+    mov rcx, rax             ; Total bytes read
+    sub rcx, 4               ; Remaining bytes
     mov rax, 1
     mov rdi, 1
     mov rsi, GENERIC_MESSAGE_PROMPT
@@ -88,7 +84,7 @@ _start:
 
     mov rax, 1
     mov rdi, 1
-    mov rsi, key_buffer
+    mov rsi, command_buffer
     mov rdx, 4
     syscall
 
@@ -105,31 +101,77 @@ _start:
     mov rsi, data_buffer
     mov rdx, 255  ; Read up to 255 bytes for any additional data
     syscall
+    jle process_command      ; If no remaining bytes, skip to command processing
 
-    mov rsi, key_buffer
+skip_leading_spaces:
+    cmp byte [rsi], ' '      ; Check for space
+    jne copy_data            ; If not space, start copying
+    inc rsi                  ; Skip space
+    dec rcx                  ; Reduce count
+    jnz skip_leading_spaces  ; Continue if more bytes
+    jmp process_command      ; If all spaces, process command
+
+copy_data:
+    mov rbx, rcx             ; Save original length for trimming
+    rep movsb                ; Copy rcx bytes to data_buffer
+
+    ; Trim trailing spaces from data_buffer
+    mov rsi, data_buffer     ; Start of data_buffer
+
+    add rsi, rbx             ; Point to end of copied data
+    dec rsi                  ; Last character
+    mov rcx, rbx             ; Length of data in data_buffer
+
+trim_trailing_spaces:
+    cmp rcx, 0               ; Check if length is 0
+    jle trim_done            ; If so, done
+    cmp byte [rsi], ' '      ; Check if current byte is space
+    jne trim_done            ; If not, done
+    dec rsi                  ; Move back
+    dec rcx                  ; Reduce length
+    jmp trim_trailing_spaces
+
+trim_done:
+    mov byte [rsi + 1], 0    ; Null-terminate after last non-space
+
+process_command:
+    ; Optional: Print command_buffer for debugging
+    mov rax, 1               ; sys_write
+    mov rdi, 1               ; stdout
+    mov rsi, command_buffer  ; Command
+
+    mov rdx, 4               ; Length 4
+    syscall
+
+    ; Optional: Print data_buffer for debugging
+    mov rax, 1               ; sys_write
+    mov rdi, 1               ; stdout
+    mov rsi, data_buffer     ; Data
+    mov rdx, rcx             ; Length of trimmed data
+    syscall
+    ; Compare command_buffer with "GET "
+    mov rsi, command_buffer
     mov rdi, get_str
     call strcmp
     test eax, eax
     jz handle_get
 
-    mov rsi, key_buffer
+    ; Compare command_buffer with "SET "
+    mov rsi, command_buffer
     mov rdi, set_str
     call strcmp
+
     test eax, eax
     jz handle_set
 
-    mov rsi, key_buffer
+    ; Compare command_buffer with "EXIT"
+    mov rsi, command_buffer
     mov rdi, exit_str
     call strcmp
     test eax, eax
     jz exit_program
 
-    ; If no match found
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, no_match_msg
-    mov rdx, no_match_msg_len
-    syscall
+    ; If no match, loop back (or handle error)
     jmp main_loop
 
 handle_get:
@@ -137,6 +179,28 @@ handle_get:
     mov rdi, 1
     mov rsi, get_msg_log
     mov rdx, get_msg_log_len
+    syscall
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, NEWLINE
+    mov rdx, 1
+    syscall
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, GENERIC_MESSAGE_PROMPT
+    mov rdx, GENERIC_MESSAGE_PROMPT_LEN
+    syscall
+    mov rdi, buffer
+    call get_length
+    mov rdx, rax
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, data_buffer
+    syscall
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, NEWLINE
+    mov rdx, 1
     syscall
     jmp main_loop
 
@@ -179,7 +243,6 @@ exit_program:
         xor eax, eax
         ret
 
-
 strcpy:
     .loop:
         mov al, [rsi]
@@ -191,3 +254,14 @@ strcpy:
         jmp .loop
     .done:
         ret
+
+get_length:
+    xor rax, rax            ; Clear rax (will hold length)
+
+.loop:
+    cmp byte [rdi + rax], 0 ; Check if current byte is null (0)
+    je .done                ; If null, exit loop
+    inc rax                 ; Increment length
+    jmp .loop               ; Continue checking next byte
+.done:
+    ret
