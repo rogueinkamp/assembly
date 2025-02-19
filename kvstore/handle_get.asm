@@ -79,20 +79,6 @@ _start:
     mov rdx, 256  ; Or however long buffer might be
     syscall
 
-    ; Define the copy loop as a local procedure
-    .copy_loop:
-        mov al, [rsi]
-        test al, al              ; Check if we've reached null terminator
-        jz .copy_done            ; If null, we're done copying
-        mov [rdi], al            ; Store character to destination
-        inc rsi
-        inc rdi
-        jmp .copy_loop
-
-    .copy_done:
-        mov byte [rdi], 0        ; Ensure destination string is null terminated
-        ret
-
     mov rsi, key_buffer
     mov rdi, get_str
     call strcmp
