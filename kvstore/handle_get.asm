@@ -18,8 +18,13 @@ section .data
     newline db 0x0a    ; ASCII code for newline (LF)
     key_buffer_length equ 5
 
+    GENERIC_MESSAGE_PROMPT db "DEBUG: "
+    GENERIC_MESSAGE_PROMPT_LEN equ $ - GENERIC_MESSAGE_PROMPT
+    NEWLINE db 0x0A
+
 section .bss
-    key_buffer resb 256  ; For storing the key
+    key_buffer resb 6  ; For storing the key
+    data_buffer resb 256  ; For storing the key
 
 section .text
     global _start
@@ -52,31 +57,53 @@ _start:
     mov rdx, 4  ; Read only first 4 bytes for command
     syscall
 
-    ; Assuming buffer is where the data was read into
-    mov byte [buffer + rax], 0 ; Null terminate, where rax holds the number of bytes actually read
-    lea rdi, [buffer + rax - 1]  ; rdi now points to the last character read
+;    ; Check if we read any data
+    cmp rax, 0
+    je main_loop  ; If no bytes read, try again
+
+    ; Trim trailing spaces
+    mov rcx, rax  ; Length of what was read
+    lea rsi, [buffer + rcx - 1]  ; Point to last character
     .trim_trailing:
-        cmp byte [rdi], ' '
+        cmp byte [rsi], ' '
         jne .trim_done
-        mov byte [rdi], 0
-        cmp rdi, buffer
-        je .trim_done
-
-        dec rdi
-        jmp .trim_trailing
-
+        dec rsi
+        dec rcx
+        cmp rcx, 0
+        jg .trim_trailing
     .trim_done:
-        ; Now move the result to key_buffer in one step
-        mov rsi, buffer
-        mov rdi, key_buffer
-        call strcpy ; You need to implement or use an existing strcpy function
 
-    ; Debug print before copy
+    mov byte [rsi + 1], 0  ; Null terminate after last non-space character
+
+    ; Move trimmed command to key_buffer
+    mov rdi, key_buffer
+    mov rsi, buffer
+    rep movsb
+
     mov rax, 1
     mov rdi, 1
+    mov rsi, GENERIC_MESSAGE_PROMPT
+    mov rdx, GENERIC_MESSAGE_PROMPT_LEN
+    syscall
 
-    mov rsi, buffer
-    mov rdx, 256  ; Or however long buffer might be
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, key_buffer
+    mov rdx, 4
+    syscall
+
+    ; add a newline so subsequent stdout calls are clean
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, NEWLINE
+    mov rdx, 1
+    syscall
+
+    ; Read remaining data if any (simplified, just read whatever's left)
+    mov rax, 0
+    mov rdi, 0
+    mov rsi, data_buffer
+    mov rdx, 255  ; Read up to 255 bytes for any additional data
     syscall
 
     mov rsi, key_buffer
