@@ -1,7 +1,6 @@
 %include "shared.inc"
 
 section .data
-    filename db "kv_store.txt", 0
     file_error_msg db "GET ERROR", 10, 0
 
 section .text

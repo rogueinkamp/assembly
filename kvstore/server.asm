@@ -1,11 +1,8 @@
 %include "shared.inc"
 
 section .data
-    filename db "kv_store.txt", 0
     file_error_msg db "FILE ERROR", 10, 0
     file_error_msg_len equ $ - file_error_msg - 1
-    mode db "a+", 0   ; Append mode for writing, read for reading
-    buffer times 256 db 0  ; Buffer for input/output
     get_str db "GET", 0
     set_str db "SET", 0
     cmd_str_len equ 3
