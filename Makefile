@@ -1,5 +1,16 @@
-compile-and-run-64:
-	nasm -f elf64 hello.asm -o hello.o && ld hello.o -o hello && ./hello
+# Build the kvstore application
+KVSTORE_SRC = kvstore/server.asm kvstore/handle_get.asm
+KVSTORE_OBJ = $(KVSTORE_SRC:.asm=.o)
 
-compile-and-run-32:
-	nasm -f elf hello.asm -o hello.o && ld -m elf_i386 hello.o -o hello && ./hello
+all: kvstore_app
+
+kvstore_app: $(KVSTORE_OBJ)
+	ld -o $@ $^
+
+%.o: %.asm
+	nasm -f elf64 -o $@ $<
+
+clean:
+	rm -f $(KVSTORE_OBJ) kvstore_app
+
+.PHONY: all clean

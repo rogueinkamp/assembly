@@ -23,9 +23,10 @@ section .data
     NEWLINE db 0x0A
 
 section .bss
-    input_buffer resb 259; temp for all data (4 + 255 max)
-    command_buffer resb 4 ; For storing the key
-    data_buffer resb 256  ; For storing the key
+    input_buffer resb 259
+    command_buffer resb 32
+    data_buffer resb 256
+    fd resd 1            ; File descriptor
 
 section .text
     global _start
@@ -175,32 +176,49 @@ process_command:
     jmp main_loop
 
 handle_get:
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, get_msg_log
-    mov rdx, get_msg_log_len
+    ; Open the kv store file
+    mov rax, 2              ; sys_open
+    mov rdi, filename
+    mov rsi, 0              ; O_RDONLY
     syscall
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, NEWLINE
-    mov rdx, 1
+    cmp rax, 0
+    jl .file_error
+    mov [fd], rax
+
+    ; Read from file
+    mov rax, 0              ; sys_read
+    mov rdi, [fd]
+    mov rsi, data_buffer
+    mov rdx, 255
     syscall
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, GENERIC_MESSAGE_PROMPT
-    mov rdx, GENERIC_MESSAGE_PROMPT_LEN
+
+    ; Close file
+    mov rax, 3              ; sys_close
+    mov rdi, [fd]
     syscall
-    mov rdi, buffer
+
+    ; Print the value
+    mov rdi, data_buffer
     call get_length
-    mov rdx, rax
-    mov rax, 1
-    mov rdi, 1
+    mov rdx, rax            ; Length in rdx
+    mov rax, 1              ; sys_write
+    mov rdi, 1              ; stdout
     mov rsi, data_buffer
     syscall
+
+    ; Newline
     mov rax, 1
     mov rdi, 1
     mov rsi, NEWLINE
     mov rdx, 1
+    syscall
+    jmp main_loop
+
+.file_error:
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, file_error_msg
+    mov rdx, file_error_msg_len
     syscall
     jmp main_loop
 
@@ -219,29 +237,46 @@ exit_program:
     xor rdi, rdi  ; Exit status 0
     syscall
 
- strcmp:
-    .loop:
-        mov al, [rsi]
-        mov bl, [rdi]
-        test al, al  ; Check for end of string
-        jz .done     ; If end, we're done comparing
-        test bl, bl  ; Check if we've reached the end of the second string
-        jz .notequal ; If end of second string but not first, not equal
-        or al, 0x20  
-        or bl, 0x20
-        cmp al, bl
-        jne .notequal
-        inc rsi
-        inc rdi
-        jmp .loop
+; Improved string comparison with:
+; - Case insensitivity
+; - Whitespace skipping
+; - Proper register preservation
+strcmp:
+    push rcx
+.loop:
+    mov al, [rsi]
+    mov bl, [rdi]
+    
+    ; Skip whitespace
+    cmp al, ' '
+    je .skip_char
+    cmp bl, ' '
+    je .skip_char
+    
+    ; Case-insensitive compare
+    or al, 0x20
+    or bl, 0x20
+    cmp al, bl
+    jne .notequal
+    
+.skip_char:
+    test al, al
+    jz .done
+    test bl, bl
+    jz .notequal
+    inc rsi
+    inc rdi
+    jmp .loop
 
-    .notequal:
-        mov eax, 1
-        ret
-
-    .done:
-        xor eax, eax
-        ret
+.notequal:
+    mov eax, 1
+    pop rcx
+    ret
+    
+.done:
+    xor eax, eax
+    pop rcx
+    ret
 
 strcpy:
     .loop:
