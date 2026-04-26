@@ -72,7 +72,7 @@ _start:
     mov rdi, command_buffer  ; Destination: command_buffer
     mov rcx, 4               ; Copy 4 bytes
     rep movsb                ; Perform copy
-    mov byte [command_buffer + 4], 0  ; Null-terminate command_buffer
+    mov byte [command_buffer + 4], 0  ; Null-terminate command_buffer (safe since buffer is 32 bytes)
 
     ; Process remaining data into data_buffer, skipping leading spaces
     mov rsi, input_buffer    ; Start of input buffer
@@ -108,7 +108,7 @@ _start:
     jle process_command      ; If no remaining bytes, skip to command processing
 
 skip_leading_spaces:
-    cmp byte [rsi], ' '      ; Check for space
+    cmp byte [rsi], ' '      ; Check for space (ASCII 0x20)
     jne copy_data            ; If not space, start copying
     inc rsi                  ; Skip space
     dec rcx                  ; Reduce count
@@ -129,14 +129,14 @@ copy_data:
 trim_trailing_spaces:
     cmp rcx, 0               ; Check if length is 0
     jle trim_done            ; If so, done
-    cmp byte [rsi], ' '      ; Check if current byte is space
+    cmp byte [rsi], ' '      ; Check if current byte is space (ASCII 0x20)
     jne trim_done            ; If not, done
     dec rsi                  ; Move back
     dec rcx                  ; Reduce length
     jmp trim_trailing_spaces
 
 trim_done:
-    mov byte [rsi + 1], 0    ; Null-terminate after last non-space
+    mov byte [rsi + 1], 0    ; Null-terminate after last non-space (safe after trim)
 
 process_command:
     ; Optional: Print command_buffer for debugging
