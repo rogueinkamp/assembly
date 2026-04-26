@@ -1,5 +1,5 @@
 # Build the kvstore application
-KVSTORE_SRC = kvstore/server.asm kvstore/handle_get.asm kvstore/simple_compare.asm
+KVSTORE_SRC = kvstore/server.asm kvstore/get.asm kvstore/set.asm kvstore/storage.asm
 KVSTORE_OBJ = $(KVSTORE_SRC:.asm=.o)
 
 all: kvstore_app
