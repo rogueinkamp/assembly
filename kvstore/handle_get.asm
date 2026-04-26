@@ -32,10 +32,11 @@ section .bss
     fd resd 1            ; File descriptor
 
 section .text
-    global _start
-
-_start:
-    jmp main_loop
+    global handle_get
+    global handle_set
+    global strcmp
+    global strcpy
+    global get_length
 
  main_loop:
     ; Clear buffer before reading new input

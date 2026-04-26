@@ -31,6 +31,8 @@ section .bss
 
 section .text
     global _start
+    extern handle_get
+    extern handle_set
  strcmp:
     .loop:
         mov al, [rsi]
@@ -167,25 +169,11 @@ close_and_exit:
     call exit
 
 handle_set:
-    ; For now, just log the set message
-    mov rax, 1              ; system call number for write
-    mov rdi, 1              ; file descriptor (stdout)
-    mov rsi, set_msg        ; message buffer
-    mov rdx, set_msg_len    ; message length
-
-    ; Make system call
-    syscall
+    call handle_set
     jmp main_loop
 
 handle_get:
-    ; For now, just log the get message
-    mov rax, 1              ; system call number for write
-    mov rdi, 1              ; file descriptor (stdout)
-    mov rsi, get_msg        ; message buffer
-    mov rdx, get_msg_len    ; message length
-
-    ; Make system call
-    syscall
+    call handle_get
     jmp main_loop
 
 
