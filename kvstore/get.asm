@@ -1,4 +1,4 @@
-%include "shared.inc"
+%include "shared.inc"  ; Local to kvstore directory
 
 section .data
     file_error_msg db "GET ERROR", 10, 0
