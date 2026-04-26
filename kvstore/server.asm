@@ -1,4 +1,4 @@
-%include "shared.inc"
+%include "kvstore/shared.inc"
 
 section .data
     file_error_msg db "FILE ERROR", 10, 0
