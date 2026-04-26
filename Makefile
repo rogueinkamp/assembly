@@ -8,7 +8,7 @@ kvstore_app: $(KVSTORE_OBJ)
 	ld -o $@ $^
 
 %.o: %.asm
-	nasm -f elf64 -I. -o $@ $<
+	nasm -f elf64 -Ikvstore -o $@ $<
 
 clean:
 	rm -f $(KVSTORE_OBJ) kvstore_app
