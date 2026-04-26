@@ -297,7 +297,8 @@ get_length:
     xor rax, rax            ; Clear rax (will hold length)
 
 .loop:
-    cmp byte [rdi + rax], 0 ; Check if current byte is null (0)
+    cmp byte [rdi + rax], 0 ; Check if current byte is null (0) or exceeds buffer
+    jge .done               ; Safety check for buffer bounds
     je .done                ; If null, exit loop
     inc rax                 ; Increment length
     jmp .loop               ; Continue checking next byte
