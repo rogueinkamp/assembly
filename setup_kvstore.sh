@@ -9,6 +9,7 @@ cp /home/evanr/assembly/kvstore/server.asm .
 cp /home/evanr/assembly/kvstore/get.asm .
 cp /home/evanr/assembly/kvstore/shared.inc .
 cp /home/evanr/assembly/kvstore/Makefile .
+cp /home/evanr/assembly/kvstore/GUIDE.md .
 
 # Simplify Makefile for new location
 sed -i 's|kvstore/||g' Makefile
