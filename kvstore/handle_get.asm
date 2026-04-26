@@ -32,8 +32,8 @@ section .bss
     fd resd 1            ; File descriptor
 
 section .text
-    global handle_get
-    global handle_set
+    global handle_get_impl
+    global handle_set_impl
     global strcmp
     global strcpy
     global get_length
@@ -179,7 +179,7 @@ process_command:
     ; If no match, loop back (or handle error)
     jmp main_loop
 
-handle_get:
+handle_get_impl:
     ; Open the kv store file
     mov rax, 2              ; sys_open
     mov rdi, filename
@@ -226,7 +226,7 @@ handle_get:
     syscall
     jmp main_loop
 
-handle_set:
+handle_set_impl:
     mov rax, 1
     mov rdi, 1
 

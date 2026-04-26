@@ -169,11 +169,15 @@ close_and_exit:
     call exit
 
 handle_set:
-    call handle_set
+    ; Forward to external handler
+    extern handle_set_impl
+    call handle_set_impl
     jmp main_loop
 
 handle_get:
-    call handle_get
+    ; Forward to external handler
+    extern handle_get_impl
+    call handle_get_impl
     jmp main_loop
 
 
