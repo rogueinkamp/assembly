@@ -1,4 +1,7 @@
 section .data
+    filename db "kv_store.txt", 0
+    file_error_msg db "FILE ERROR", 10, 0
+    file_error_msg_len equ $ - file_error_msg - 1
     buffer times 256 db 0  ; Buffer for input/output
     get_str db "GET", 0
     set_str db "SET", 0
