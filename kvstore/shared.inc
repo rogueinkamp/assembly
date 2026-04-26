@@ -11,6 +11,6 @@ section .data
     mode db "a+", 0          ; File mode: append+/read
     fd dd 0                  ; File descriptor
     
-    ; Common strings
+    ; Common strings  
     newline db 10, 0         ; \n
     space db " ", 0          ; Space character
