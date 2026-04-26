@@ -31,8 +31,8 @@ section .bss
 
 section .text
     global _start
-    extern handle_get
-    extern handle_set
+    extern handle_get_impl
+    extern handle_set_impl
  strcmp:
     .loop:
         mov al, [rsi]
