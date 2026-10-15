@@ -1,0 +1,10 @@
+.aider*
+*.o
+hello
+pushPop
+readFile
+cStrings
+kvstore/server
+kvstore/handle_get
+kvstore/simple_compare
+kvstore/kvstore
